@@ -14,3 +14,6 @@ For example, a query is `How are you!\n`. Then input will be `How are you!` and 
 ```
 python train.py
 ```
+
+## TensorboardX 
+Used for visualzie the result of training
