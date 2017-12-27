@@ -14,7 +14,8 @@ import models.LanguageModel
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_pickle', default='data/tiny-shakespeare.r')
+    parser.add_argument('--input_data_pickle', default='data/tiny-shakespeare.data.pickle')
+    parser.add_argument('--input_vocab_pickle', default='data/tiny-shakespeare.vocab.pickle')
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--rnn_type', default='lstm')
     parser.add_argument('--rnn_layers', type=int, default=3)
@@ -35,7 +36,7 @@ if __name__ == "__main__":
     writer = SummaryWriter("tensorboardX")
     
     # load preprocessed data
-    with open(args.input_pickle, 'rb') as f:
+    with open(args.input_data_pickle, 'rb') as f:
         json_data = pickle.load(f)
     
     train_iter = DataLoader(RNNDataset(json_data['train']), 
@@ -52,17 +53,20 @@ if __name__ == "__main__":
                            collate_fn=my_collate_fn_cuda)
 
     # initialize the model
+    # load preprocessed data
+    with open(args.input_vocab_pickle, 'rb') as f:
+        json_data = pickle.load(f)
+
     vocab_size = len(json_data['idx_to_token'])
     embed_size = args.embedding_size
     print("vocab_size={}".format(vocab_size))
     print("embed_size={}".format(embed_size))
     model = models.LanguageModel.CharRNN(vocab_size, embed_size)
     model.cuda()
-    
+
     # set criterion and optimizer
     criterion = nn.CrossEntropyLoss(size_average=False)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    
     for epoch in range(args.epoches):
         start_time = time.time()
         model.train()
@@ -92,10 +96,7 @@ if __name__ == "__main__":
             padded_out = model(batch['input'], batch['lengths'])
             packed_out = pack_padded_sequence(padded_out, batch['lengths'], batch_first=True)
             packed_target = pack_padded_sequence(batch['output'], batch['lengths'], batch_first=True)
-            optimizer.zero_grad()
             loss = criterion(packed_out.data, packed_target.data)
-            loss.backward()
-            optimizer.step()
             val_loss += loss.data[0]
             num_token += np.sum(batch['lengths'])
         val_loss /= num_token
@@ -108,10 +109,7 @@ if __name__ == "__main__":
             padded_out = model(batch['input'], batch['lengths'])
             packed_out = pack_padded_sequence(padded_out, batch['lengths'], batch_first=True)
             packed_target = pack_padded_sequence(batch['output'], batch['lengths'], batch_first=True)
-            optimizer.zero_grad()
             loss = criterion(packed_out.data, packed_target.data)
-            loss.backward()
-            optimizer.step()
             test_loss += loss.data[0]
             num_token += np.sum(batch['lengths'])
         test_loss /= num_token
@@ -127,10 +125,4 @@ if __name__ == "__main__":
         print("[{}/{}] cost time = {} s".format(epoch+1, args.epoches, cost_time))
     
     # write summary to the disk
-    writer.export_scalars_to_json("tensorboardX/log.json")
     writer.close()
-        
-
-        
-
-        
