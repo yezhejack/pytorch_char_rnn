@@ -16,4 +16,4 @@ python train.py
 ```
 
 ## TensorboardX 
-Used for visualzie the result of training
+Used for visualizing the result of training
