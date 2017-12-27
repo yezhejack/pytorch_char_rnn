@@ -7,6 +7,7 @@ import numpy as np
 import pickle
 import argparse
 import os
+import time
 from tensorboardX import SummaryWriter
 from data_helper import RNNDataset, my_collate_fn_cuda
 import models.LanguageModel
@@ -63,6 +64,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     
     for epoch in range(args.epoches):
+        start_time = time.time()
         model.train()
         train_loss = 0.0
         num_token = 0
@@ -81,7 +83,7 @@ if __name__ == "__main__":
         print("[{}/{}] train_loss = {}".format(epoch+1, args.epoches, train_loss))
         #if epoch == 1:
         #    writer.add_graph(model, padded_out)
-        writer.add_scalar("rnn/data/train_loss", train_loss, epoch)
+        writer.add_scalar(args.checkpoint_prefix+"/train_loss", train_loss, epoch)
         
         model.eval()
         val_loss = 0.0
@@ -98,7 +100,7 @@ if __name__ == "__main__":
             num_token += np.sum(batch['lengths'])
         val_loss /= num_token
         print("[{}/{}] val_loss = {}".format(epoch+1, args.epoches, val_loss))
-        writer.add_scalar("rnn/data/val_loss", val_loss, epoch)
+        writer.add_scalar(args.checkpoint_prefix+"/val_loss", val_loss, epoch)
         
         test_loss = 0.0
         num_token = 0
@@ -114,11 +116,15 @@ if __name__ == "__main__":
             num_token += np.sum(batch['lengths'])
         test_loss /= num_token
         print("[{}/{}] test_loss = {}".format(epoch+1, args.epoches, test_loss))
-        writer.add_scalar("rnn/data/test_loss", test_loss, epoch)
+        writer.add_scalar(args.checkpoint_prefix+"/test_loss", test_loss, epoch)
 
         # save checkpoint
         os.makedirs(args.checkpoint_dir, exist_ok=True)
         torch.save(model.state_dict(), os.path.join(args.checkpoint_dir, args.checkpoint_prefix+'-'+str(epoch)))
+        
+        # profiler
+        cost_time = time.time()-start_time
+        print("[{}/{}] cost time = {} s".format(epoch+1, args.epoches, cost_time))
     
     # write summary to the disk
     writer.export_scalars_to_json("tensorboardX/log.json")
