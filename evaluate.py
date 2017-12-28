@@ -12,19 +12,20 @@ import numpy as np
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_pickle', default='data/tiny-shakespeare.r')
+    parser.add_argument('--input_vocab', default='data/tiny-shakespeare.vocab.pickle')
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--input_query', help="the file contains sentence to evaluate", default="query.txt")
     parser.add_argument("--checkpoint", help="the path to the checkpoint")
     parser.add_argument("--embedding_size", type=int, default=64)
-    parser.add_argument("--output_loss", default="loss.txt")
+    parser.add_argument("--output_loss", default="loss.out")
     args = parser.parse_args()
     
     # read vocab
-    with open(args.input_pickle, 'rb') as f:
+    with open(args.input_vocab, 'rb') as f:
         json_data = pickle.load(f)
     token_to_idx = json_data['token_to_idx']
-    del(json_data)
+    idx_to_token = json_data['idx_to_token']
+
     vocab_size = len(token_to_idx)
     embed_size = args.embedding_size
     
@@ -38,15 +39,21 @@ if __name__ == "__main__":
     with open(args.input_query) as f:
         line = f.readline()
         while line != "":
+            if line == "\n":
+                print("There are blank line without character.")
+                exit(-1)
             query = []
-            for word in line:
+            for word in line.strip():
                 if word in token_to_idx:
                     query.append(token_to_idx[word])
+                else:
+                    query.append(token_to_idx['<UNK>'])
+            query.append(token_to_idx['<EOS>'])
             query_list.append(query)
             original_query_list.append(line.strip())
             line = f.readline()
     
-    print(query_list)
+    #print(query_list)
     query_iter = DataLoader(RNNDataset(query_list), 
                             batch_size=args.batch_size, 
                             shuffle=False, 
@@ -67,7 +74,10 @@ if __name__ == "__main__":
         query_loss += batch_loss.tolist()
     print(original_query_list)
     for i in range(len(query_loss)):
-        print("{}:{}".format(query_loss[i], original_query_list[i]))
+        query_str = ""
+        for idx in query_list[i]:
+            query_str += idx_to_token[idx]
+        print("{}:{}".format(query_loss[i], query_str))
     with open(args.output_loss, "w") as f:
         for loss in query_loss:
             f.write("{}\n".format(loss))

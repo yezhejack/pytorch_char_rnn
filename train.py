@@ -25,6 +25,7 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=2727)
     parser.add_argument('--checkpoint_dir', default="checkpoint/")
     parser.add_argument('--checkpoint_prefix', default="charrnn")
+    parser.add_argument('--tensorboardX', default="tensorboardX")
     args = parser.parse_args()
 
     # set seed
@@ -33,7 +34,7 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
 
     # set tensorboardX
-    writer = SummaryWriter("tensorboardX")
+    writer = SummaryWriter(args.tensorboardX)
     
     # load preprocessed data
     with open(args.input_data_pickle, 'rb') as f:
