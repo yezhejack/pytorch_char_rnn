@@ -27,11 +27,12 @@ if __name__ == "__main__":
     idx_to_token = json_data['idx_to_token']
 
     vocab_size = len(token_to_idx)
-    embed_size = args.embedding_size
     
     # load model
+    state_dict = torch.load(args.checkpoint)
+    embed_size = state_dict['embedding_layer.weight'].shape[1]
     model = models.LanguageModel.CharRNN(vocab_size, embed_size)
-    model.load_state_dict(torch.load(args.checkpoint))
+    model.load_state_dict(state_dict)
     model.cuda()
     model.eval()
     query_list = []
